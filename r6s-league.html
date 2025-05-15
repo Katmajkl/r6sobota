@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Rainbow Six – Sobota League</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1a24;--fg:#e8e8e8;--table:#1c2733;--accent:#fcbf17;--gold:#d4af37;--silver:#c0c0c0;--bronze:#cd7f32}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Montserrat,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;display:flex;flex-direction:column}
+header{background:#161e29;text-align:center;padding:1.2rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+h1{font-size:1.8rem;font-weight:600;letter-spacing:.6px}
+#weekSel{margin-top:.6rem;padding:.45rem .8rem;font-size:1rem;border:1px solid var(--accent);background:none;color:var(--fg);border-radius:4px}
+main{flex:1;width:100%;max-width:1400px;margin:auto;padding:1.2rem}
+#tableWrap{overflow:auto}
+table{width:100%;border-collapse:collapse;background:var(--table);border-radius:8px;overflow:hidden}
+th,td{padding:.35rem .5rem;text-align:center;border-bottom:1px solid #2a3645}
+th{background:#253142;font-weight:600;position:sticky;top:0;z-index:1}
+th:first-child,td:first-child{text-align:left;padding-left:1rem}
+tr:nth-child(even){background:#202c39}
+.total{background:#18222d;font-weight:600}
+input.score{width:3rem;background:transparent;border:none;border-bottom:1px dashed #555;color:var(--accent);text-align:center;font-weight:600}
+input.score:disabled{border:none;color:var(--fg)}
+button#editBtn{margin:1rem 0;padding:.55rem 1.4rem;font-size:1rem;border:none;border-radius:5px;background:var(--accent);color:#000;font-weight:600;cursor:pointer;transition:.2s}
+button#editBtn:hover{transform:scale(1.05)}
+.podium{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:1.4rem}
+.card{flex:1 1 200px;max-width:260px;padding:1rem;border-radius:8px;text-align:center;font-weight:600;color:#000}
+.gold{background:var(--gold)}.silver{background:var(--silver)}.bronze{background:var(--bronze)}
+.card span{display:block;font-size:1.3rem;margin-top:.4rem}
+#absent{margin-top:1.2rem;text-align:center;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1>Rainbow Six – Sobota League</h1>
+  <select id="weekSel"></select>
+</header>
+<main>
+  <div id="tableWrap"></div>
+  <button id="editBtn">Edit ✏️</button>
+  <div id="podium"></div>
+  <div id="absent"></div>
+</main>
+<script>
+const players=["Endo","Marek","Ljuk","Audel","Dano","Robo","Jirka","Brano","Majkl","Samo","Pato","Roman"];
+const months=["May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const weeks=["W1","W2","W3","W4","W5"];
+const weekList=[];
+months.forEach(m=>{let start=0;if(m==="May")start=2;weeks.slice(start).forEach(w=>weekList.push(`${m}-${w}`));});
+const maxGames=20;
+const storeKey="r6s2025data";
+let data=JSON.parse(localStorage.getItem(storeKey)||"{} ");
+function blankWeek(){const o={};players.forEach(p=>o[p]=Array(maxGames).fill(""));return o;}
+const sel=document.getElementById('weekSel');
+weekList.forEach(w=>{const opt=document.createElement('option');opt.value=w;opt.textContent=w;sel.appendChild(opt);});
+sel.value=weekList[0];
+function render(){const wk=sel.value;if(!data[wk])data[wk]=blankWeek();const tbl=`<table><thead><tr><th>Player</th>${[...Array(maxGames)].map((_,i)=>`<th>G${i+1}</th>`).join('')}<th>Total</th></tr></thead><tbody>${players.map(p=>{const g=data[wk][p];const total=g.reduce((s,v)=>s+(parseInt(v)||0),0);return`<tr><td>${p}</td>${g.map((v,i)=>`<td><input class='score' data-p='${p}' data-i='${i}' value='${v}' disabled></td>`).join('')}<td class='total'>${total}</td></tr>`}).join('')}</tbody></table>`;document.getElementById('tableWrap').innerHTML=tbl;updatePodium();}
+function updatePodium(){const wk=sel.value;const totals=players.map(p=>({p,total:data[wk][p].reduce((s,v)=>s+(parseInt(v)||0),0)}));const absent=totals.filter(t=>t.total===0&&data[wk][t.p].every(v=>v==='')).map(t=>t.p);
+ totals.sort((a,b)=>b.total-a.total);
+ const colors=["gold","silver","bronze"];const podiumHTML=`<div class='podium'>${totals.slice(0,3).map((t,i)=>`<div class='card ${colors[i]}'>${i+1}. ${t.p}<span>${t.total} pts</span></div>`).join('')}</div>`;document.getElementById('podium').innerHTML=podiumHTML;document.getElementById('absent').textContent=absent.length?`Nehrali: ${absent.join(', ')}`:"";}
+
+let editing=false;const btn=document.getElementById('editBtn');
+btn.addEventListener('click',()=>{if(!editing){const pwd=prompt("Password?");if(pwd!=="siege2025")return;editing=true;btn.textContent="Save 💾";document.querySelectorAll('input.score').forEach(i=>i.disabled=false);}else{const wk=sel.value;document.querySelectorAll('input.score').forEach(i=>{data[wk][i.dataset.p][+i.dataset.i]=i.value.trim();});localStorage.setItem(storeKey,JSON.stringify(data));editing=false;btn.textContent="Edit ✏️";render();}});
+sel.addEventListener('change',render);
+render();
+</script>
+</body>
+</html>
